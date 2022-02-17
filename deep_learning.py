@@ -1,12 +1,10 @@
-from os import access
-from matplotlib.pyplot import show
 import numpy as np
 from math import ceil
-import cv2 as cv
 import pygame
 import time
 from keyboard import is_pressed
-
+from pathlib import Path
+import cv2 as cv
 
 class Layer:
     
@@ -415,15 +413,23 @@ class NeuralNetwork:
         divided = np.divide(sum, len(guess[0]))
         return np.mean(np.sqrt(divided))
     
-    def save(self, file_name=None):
-        if file_name is None:
-            file_name = f'model.npy'
-            np.save(file_name, np.array(self.layers), allow_pickle=True)
-    
-    def load(self, file_name=None):
-        if file_name is None:
-            file_name = f'model.npy'
-            self.layers = list(np.load(file_name, allow_pickle=True))
+    def save(self, file_name='model.npy'):
+        path = Path(f'{Path.cwd()}\models')
+        if Path(f'{path}\{file_name}').exists():
+            print('ERROR WHILE SAVING MODEL\n')
+            print(f'File: "{path}\{file_name}" already exists!\n')
+            return
+        path.mkdir(exist_ok=True)
+        path = Path(f'{path}\{file_name}')
+        np.save(path, np.array(self.layers), allow_pickle=True)
+
+    def load(self, file_name='model.npy'):
+        path = Path(f'{Path.cwd()}\models\{file_name}')
+        if not path.exists():
+            print('ERROR WHILE SAVING MODEL\n')
+            print(f'Path: "{path}" doesn\'t exists!\n')
+            return
+        self.layers = list(np.load(path, allow_pickle=True))
 
 if __name__ == '__main__':
     # create Layer objects
@@ -445,7 +451,7 @@ if __name__ == '__main__':
         net.mutate(0.02)
         net.vis.show_net(frame_time=-1)
     
-    net.vis.show_net()
+    # net.vis.show_net()
     for _ in range(600):
         # mutates all layers in network same as last time
         net.mutate(0.02, repeat=True)
@@ -458,3 +464,7 @@ if __name__ == '__main__':
     net.push_forward([1, 0, 1, 0], frame_time=0.5)
     # hold = True holds frame on screen, quit will quit entire script after key is pressed
     net.push_forward([1, 1, 1, 1], frame_time=0.5, hold=True, quit=True)
+
+    # saves and loads neural networks
+    net.save('filename.npy')
+    net.load('filename.npy')
