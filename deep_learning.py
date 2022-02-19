@@ -1,5 +1,5 @@
 import numpy as np
-from math import ceil
+from math import ceil, sqrt
 import pygame
 import time
 from keyboard import is_pressed
@@ -52,8 +52,8 @@ class Layer:
             case self.MIN_MAX:
                 pass
             case self.DIV_BY_MAX:
-                inputs = inputs.clip(1e-99, 1)
-                maximum = np.max(inputs, axis=1, keepdims=True)
+                absolute = np.abs(inputs)
+                maximum = np.max(absolute, axis=1, keepdims=True)
                 inputs = np.divide(inputs, maximum)
             case self.NONE:
                 pass
@@ -67,11 +67,12 @@ class Layer:
         # aplies specified activation funtion
         match self.activation:
             case self.SIGMOID:
-                self.outputs = np.divide(1, 1+np.exp(-np.clip(outputs, -15, 15)))
+                np.clip(outputs, -15, 15, out=outputs)
+                self.outputs = np.divide(1, 1+np.exp(-outputs))
             case self.RELU:
                 self.outputs = np.maximum(0, outputs)
             case self.SOFTMAX:
-                inputs = inputs.clip(1e-99, 1)
+                np.clip(outputs, -15, 15, out=outputs)
                 e = np.exp(outputs)
                 e = np.divide(e, np.max(e, axis=1, keepdims=True))
                 self.outputs = np.divide(e, np.sum(e, axis=1, keepdims=True))
@@ -114,6 +115,12 @@ class Layer:
     def reverse_mutation(self):
         self.weights -= self.last_weights_mutation
         self.biases -= self.last_biases_mutation
+    
+    def copy(self):
+        copied = Layer(self.inputs, self.neurons, activation=self.activation, normalization=self.normalization)
+        copied.weights = np.array(self.weights, copy=True, order='K')
+        copied.biases = np.array(self.biases, copy=True, order='K')
+        return copied
 
 
 class NeuralNetwork:
@@ -368,12 +375,17 @@ class NeuralNetwork:
         self.visualization_enabled = True
 
 
-    def push_forward(self, inputs, frame_time=-1, hold=False, quit=False):
+    def push_forward(self, inputs, frame_time=-1, hold=False, quit=False, multi=False):
         if not self.visualization_enabled or frame_time == -1:
             for layer in self.layers:
                 layer.push_forward(inputs)
                 inputs = layer.outputs
-            self.outputs = layer.outputs
+            if not multi:
+                self.outputs = layer.outputs[0]
+            else:
+                self.outputs = layer.outputs
+            
+            return
 
         if not self.vis.running:
             self.vis.create_screen()
@@ -407,11 +419,16 @@ class NeuralNetwork:
         return np.mean(sum)
     
     
-    def rootMeanSquareError(self, guess, target):
-        power = np.power(guess - target, 2)
-        sum = np.sum(power, axis=1, keepdims=True)
-        divided = np.divide(sum, len(guess[0]))
-        return np.mean(np.sqrt(divided))
+    def rootMeanSquareError(self, guess, target, multi=False):
+        if not multi:
+            power = np.power(guess - target, 2)
+            sum = np.sum(power)
+            return sqrt(sum)
+        else:
+            power = np.power(guess - target, 2)
+            sum = np.sum(power, axis=1, keepdims=True)
+            divided = np.divide(sum, len(guess[0]))
+            return np.mean(np.sqrt(divided))
     
     def save(self, file_name='model.npy'):
         path = Path(f'{Path.cwd()}\models')
@@ -426,7 +443,7 @@ class NeuralNetwork:
     def load(self, file_name='model.npy'):
         path = Path(f'{Path.cwd()}\models\{file_name}')
         if not path.exists():
-            print('ERROR WHILE SAVING MODEL\n')
+            print('ERROR WHILE LOADING MODEL\n')
             print(f'Path: "{path}" doesn\'t exists!\n')
             return
         self.layers = list(np.load(path, allow_pickle=True))
@@ -452,7 +469,7 @@ if __name__ == '__main__':
         net.vis.show_net(frame_time=-1)
     
     # net.vis.show_net()
-    for _ in range(600):
+    for _ in range(400):
         # mutates all layers in network same as last time
         net.mutate(0.02, repeat=True)
         net.vis.show_net(frame_time=-1)
