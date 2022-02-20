@@ -1,10 +1,11 @@
 import numpy as np
-from math import ceil, sqrt
+import math
 import pygame
 import time
 from keyboard import is_pressed
 from pathlib import Path
 import cv2 as cv
+import random
 
 class Layer:
     
@@ -93,13 +94,13 @@ class Layer:
             # leavs only scales * 100 % mutations in
             weights_mutation_scale = np.zeros_like(weights_mutation)
             weights_mutation_scale = weights_mutation_scale.reshape((1, -1))
-            weights_mutation_scale[:,:ceil(weights_mutation_scale.shape[1] * scale)] = 1
+            weights_mutation_scale[:,:math.ceil(weights_mutation_scale.shape[1] * scale)] = 1
             np.random.shuffle(weights_mutation_scale[0])
             weights_mutation_scale = np.reshape(weights_mutation_scale, weights_mutation.shape)
             weights_mutation *= weights_mutation_scale
 
             biases_mutation_scale = np.zeros_like(biases_mutation)
-            biases_mutation_scale[:,:ceil(biases_mutation_scale.shape[1] * scale)] = 1
+            biases_mutation_scale[:,:math.ceil(biases_mutation_scale.shape[1] * scale)] = 1
             np.random.shuffle(biases_mutation_scale[0])
             biases_mutation_scale = np.reshape(biases_mutation_scale, biases_mutation.shape)
             biases_mutation *= biases_mutation_scale
@@ -423,7 +424,7 @@ class NeuralNetwork:
         if not multi:
             power = np.power(guess - target, 2)
             sum = np.sum(power)
-            return sqrt(sum)
+            return math.sqrt(sum)
         else:
             power = np.power(guess - target, 2)
             sum = np.sum(power, axis=1, keepdims=True)
@@ -482,6 +483,184 @@ if __name__ == '__main__':
     # hold = True holds frame on screen, quit will quit entire script after key is pressed
     net.push_forward([1, 1, 1, 1], frame_time=0.5, hold=True, quit=True)
 
-    # saves and loads neural networks
-    net.save('filename.npy')
-    net.load('filename.npy')
+
+class Agent(NeuralNetwork):
+
+    def __init__(self, layers):
+        super().__init__(layers)
+        
+        self.idn = id(self)
+
+        self.fitness = 0
+        self.breeding_prob = 0
+
+    def copy(self):
+        new_layers = []
+        for layer in self.layers:
+            new_layer = layer.copy()
+            new_layers.append(new_layer)
+        agent_copy = Agent(new_layers)
+        return agent_copy
+
+
+class Population():
+
+    RULETTE_WHEEL = 'roulette wheel'
+    TOP_X = 'top x of poulation'
+
+    SQUARED = 'squared'
+    NONE = 'none'
+
+    def __init__(self, agent=None, size=None, unique=True, file_name=None):
+
+        self.include_parents = True
+        self.mutation_rate = 1
+        self.mutation_scale = 0.1
+        self.pool_size = 6
+        self.selection_method = self.TOP_X
+
+        self.n_layers = 1
+
+        if file_name is not None:
+            path = Path(f'{Path.cwd()}\populations\{file_name}')
+            if not path.exists():
+                print('ERROR WHILE LOADING POPULATION\n')
+                print(f'Path: "{path}" doesn\'t exists!\n')
+                return
+            self.agents = list(np.load(path, allow_pickle=True))
+            self.size = len(self.agents)
+            return
+
+        self.size = size
+
+        self.agents = []
+        for _ in range(size):
+            new_agent = agent.copy()
+            if unique:
+                new_agent.mutate()
+            new_agent.idn = id(new_agent)
+            self.agents.append(new_agent)
+
+    def fitness_func(self, fitness):
+        return math.pow(fitness, 2)
+
+    def calc_breeding_prob(self):
+        fitness_sum = 0
+        for agent in self.agents:
+            fitness_sum += self.fitness_func(agent.fitness)
+        if fitness_sum == 0:
+            for agent in self.agents:
+                agent.survival_prob = 1/self.size
+            return
+        for agent in self.agents:
+            agent.breeding_prob = self.fitness_func(agent.fitness) / fitness_sum
+
+
+    def create_mating_pool(self, size, method=None):
+        if method is None:
+            method = self.selection_method
+
+        self.calc_breeding_prob()
+
+        if method == self.RULETTE_WHEEL:
+            mating_pool = []
+            for _ in range(size):
+                idx = 0
+                rand = random.random()
+                while rand > 0:
+                    rand -= self.agents[idx].breeding_prob
+                    idx += 1
+                idx -= 1
+                picked = self.agents[idx]
+                mating_pool.append(picked)
+            return mating_pool
+        
+        if method == self.TOP_X:
+            mating_pool = sorted(self.agents, key=lambda a: a.breeding_prob, reverse=True)[:size]
+            return mating_pool
+    
+    def evolution_settings(self, include_parents=None, mutation_rate=None, mutation_scale=None, pool_size=None, selection_method=None):
+        if include_parents is not None:
+            self.include_parents = include_parents
+        if mutation_rate is not None:
+            self.mutation_rate = mutation_rate
+        if mutation_scale is not None:
+            self.mutation_scale = mutation_scale
+        if pool_size is not None:
+            self.pool_size = pool_size
+        if selection_method is not None:
+            self.selection_method = selection_method
+    
+    def breeding_settings(self, n_layers=None):
+        if n_layers is not None:
+            self.n_layers = n_layers
+        
+    def cross(self, parent_1, parent_2, cross_size=None, layer_idx=None):
+
+        child_1 = parent_1.copy()
+        child_2 = parent_2.copy()
+
+        if layer_idx is None:
+            layer_idx = random.randint(0, len(parent_1.layers)-1)
+
+        child_1_biases = child_1.layers[layer_idx].biases[0]
+        child_2_biases = child_2.layers[layer_idx].biases[0]
+
+        child_1_weights = child_1.layers[layer_idx].weights
+        child_2_weights = child_2.layers[layer_idx].weights
+
+        layer_size = len(child_1_biases)
+
+        if cross_size is None:
+            cross_size = int(layer_size / 2)
+
+        if cross_size == layer_size:
+            split_point = 0
+        else: split_point = random.randint(0, layer_size-cross_size-1)
+            
+        temp = np.copy(child_1_weights.T[split_point:split_point+cross_size])
+        child_1_weights.T[split_point:split_point+cross_size] = np.copy(child_2_weights.T[split_point:split_point+cross_size])
+        child_2_weights.T[split_point:split_point+cross_size] = temp
+
+        temp = np.copy(child_1_biases[split_point:split_point+cross_size])
+        child_1_biases[split_point:split_point+cross_size] = np.copy(child_2_biases[split_point:split_point+cross_size])
+        child_2_biases[split_point:split_point+cross_size] = temp
+
+        return [child_1, child_2]
+
+
+    def evolve(self):
+        self.calc_breeding_prob()
+
+        new_agents = []
+
+        mating_pool = self.create_mating_pool(self.size, self.selection_method)
+
+        if self.include_parents:
+            for agent in mating_pool:
+                new_agents.append(agent)
+
+        while len(new_agents) < self.size:
+            parents = random.sample(mating_pool, 2)
+            
+            offspring = self.cross(parents[0], parents[1])
+            for child in offspring:
+                child.mutate(rate=self.mutation_rate, scale=self.mutation_scale)
+            new_agents.append(offspring[0])
+            if len(new_agents) == self.size:
+                break
+            new_agents.append(offspring[1])
+            
+        self.agents = new_agents
+    
+    def save(self, file_name='population.npy', rewrite=False):
+        path = Path(f'{Path.cwd()}\populations')
+        if Path(f'{path}\{file_name}').exists():
+            if not rewrite:
+                print('ERROR WHILE SAVING POPULATION\n')
+                print(f'File: "{path}\{file_name}" already exists!\n')
+                return
+            if rewrite: Path(f'{path}\{file_name}').unlink()
+        path.mkdir(exist_ok=True)
+        path = Path(f'{path}\{file_name}')
+        np.save(path, np.array(self.agents), allow_pickle=True)
