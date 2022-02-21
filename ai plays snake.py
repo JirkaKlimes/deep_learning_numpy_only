@@ -1,9 +1,10 @@
+from re import T
 from games.snake import Snake, Vis
 from keyboard import is_pressed
 import os
 import numpy as np
 
-from deep_learning import Agent, Layer, Population
+from deep_learning import Agent, Layer, NeuralNetwork, Population
 
 
 size = 10
@@ -13,23 +14,23 @@ population_size = 100
 
 
 max_steps = 30
-rate = 1
-scale = 0.1
-pool_size = 10
+rate = 0.5
+scale = 0.3
+pool_size = 4
 method = Population.TOP_X
-include_parents = False
+include_parents = True
+mutated_layers = NeuralNetwork.RANDOM
 
-l1 = Layer(8, 10, activation=Layer.RELU)
-l2 = Layer(10, 10, activation=Layer.RELU)
-l3 = Layer(10, 4, activation=Layer.SOFTMAX)
+# l1 = Layer(8, 4, activation=Layer.RELU)
+# l2 = Layer(4, 4, activation=Layer.SOFTMAX)
 
-agent = Agent([l1, l2, l3])
-poulation = Population(agent, population_size)
+# agent = Agent([l1, l2])
+# population = Population(agent, population_size)
 
 
-# poulation = Population(file_name='snakes.npy')
-poulation.evolution_settings(include_parents=include_parents, mutation_rate=rate, mutation_scale=scale,
-                             pool_size=pool_size, selection_method=method, population_size=population_size)
+population = Population(file_name='snakes.npy')
+population.evolution_settings(include_parents=include_parents, mutation_rate=rate, mutation_scale=scale,
+                             pool_size=pool_size, selection_method=method, population_size=population_size, mutated_layers=mutated_layers)
 
 
 snakes = [Snake(size) for _ in range(population_size)]
@@ -48,7 +49,7 @@ while True:
         i = max_steps
         while i > 0:
             snake_playing = False
-            for idx, snake, agent in zip(range(population_size), snakes, poulation.agents):
+            for idx, snake, agent in zip(range(population_size), snakes, population.agents):
                 if snake.gameover:
                     continue
                 agent.push_forward(snake.get_steps())
@@ -72,7 +73,7 @@ while True:
                     best_score = snake.score
                 if snake.score > best_gen_score:
                     best_gen_score = snake.score
-                agent.fitness = snake.steps_taken + snake.score*100
+                agent.fitness = -snake.steps_taken + snake.score*40
                 if agent.fitness > best_fitness:
                     best_fitness = agent.fitness
             if vis_enabled:
@@ -88,8 +89,8 @@ while True:
         os.system('cls')
         print(f'Gen: {gen} | Best fitness: {best_fitness} | Game: {game_idx+1}/{n_games} | Best score: {best_score}/{best_gen_score}')
 
-    poulation.save(f'snakes.npy', rewrite=True)
-    poulation.evolve()
+    population.save(f'snakes.npy', rewrite=True)
+    population.evolve()
 
 
 # import cProfile

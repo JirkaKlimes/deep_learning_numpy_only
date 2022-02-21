@@ -59,7 +59,7 @@ class Game:
 
         self.last_update_time = None
 
-        self.speed = 300
+        self.speed = 350
         self.fps = 60
 
         self.birds = []

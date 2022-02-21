@@ -126,6 +126,10 @@ class Layer:
 
 class NeuralNetwork:
 
+    RANDOM = 'random'
+
+    ALL = 'all'
+
     class Visualization:
 
         color_background = (10, 10, 10)
@@ -404,15 +408,23 @@ class NeuralNetwork:
 
 
     
-    def mutate(self, rate=1, repeat=False, scale=1):
-        for layer in self.layers:
-            layer.mutate(rate=rate, repeat=repeat, scale=scale)
-    
+    def mutate(self, rate=1, repeat=False, scale=1, layers=ALL):
+        if layers == self.ALL:
+            self.last_mutated_layer = self.ALL
+            for layer in self.layers:
+                layer.mutate(rate=rate, repeat=repeat, scale=scale)
+        if layers == self.RANDOM:
+            layer_idx = random.randint(0, len(self.layers)-1)
+            self.last_mutated_layer = layer_idx
+            self.layers[layer_idx].mutate(rate=rate, repeat=repeat, scale=scale)
+
 
     def reverse_mutation(self):
-        for layer in self.layers:
-            layer.reverse_mutation()
-    
+        if self.last_mutated_layer == self.ALL:
+            for layer in self.layers:
+                layer.reverse_mutation()
+        else:
+            self.layers[self.last_mutated_layer].reverse_mutation()
 
     def crossEntropyLoss(self, guess, target):
         guess = guess.clip(1e-99, 1)
@@ -518,6 +530,7 @@ class Population():
         self.mutation_scale = 0.1
         self.pool_size = 6
         self.selection_method = self.TOP_X
+        self.mutated_layers = NeuralNetwork.RANDOM
 
         self.n_layers = 1
 
@@ -579,7 +592,8 @@ class Population():
             mating_pool = sorted(self.agents, key=lambda a: a.breeding_prob, reverse=True)[:size]
             return mating_pool
     
-    def evolution_settings(self, include_parents=None, mutation_rate=None, mutation_scale=None, pool_size=None, selection_method=None, population_size=None):
+    def evolution_settings(self, include_parents=None, mutation_rate=None, mutation_scale=None, pool_size=None, 
+                           selection_method=None, population_size=None, mutated_layers=None):
         if include_parents is not None:
             self.include_parents = include_parents
         if mutation_rate is not None:
@@ -592,6 +606,9 @@ class Population():
             self.selection_method = selection_method
         if population_size is not None:
             self.size = population_size
+        if mutated_layers is not None:
+            self.mutated_layers = mutated_layers
+    
     
     def breeding_settings(self, n_layers=None):
         if n_layers is not None:
