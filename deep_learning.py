@@ -579,7 +579,7 @@ class Population():
             mating_pool = sorted(self.agents, key=lambda a: a.breeding_prob, reverse=True)[:size]
             return mating_pool
     
-    def evolution_settings(self, include_parents=None, mutation_rate=None, mutation_scale=None, pool_size=None, selection_method=None):
+    def evolution_settings(self, include_parents=None, mutation_rate=None, mutation_scale=None, pool_size=None, selection_method=None, population_size=None):
         if include_parents is not None:
             self.include_parents = include_parents
         if mutation_rate is not None:
@@ -590,6 +590,8 @@ class Population():
             self.pool_size = pool_size
         if selection_method is not None:
             self.selection_method = selection_method
+        if population_size is not None:
+            self.size = population_size
     
     def breeding_settings(self, n_layers=None):
         if n_layers is not None:
@@ -634,7 +636,7 @@ class Population():
 
         new_agents = []
 
-        mating_pool = self.create_mating_pool(self.size, self.selection_method)
+        mating_pool = self.create_mating_pool(self.pool_size, self.selection_method)
 
         if self.include_parents:
             for agent in mating_pool:

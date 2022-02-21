@@ -139,7 +139,7 @@ class Snake:
         
         info = np.array([int(3 in s_u and s_u.index(3) < s_u.index(1)), int(3 in s_l and s_l.index(3) < s_l.index(1)),
                          int(3 in s_d and s_d.index(3) < s_d.index(1)), int(3 in s_r and s_r.index(3) < s_r.index(1)),
-                         s_u.index(1), s_l.index(1), s_d.index(1), s_r.index(1)])
+                         int(s_u.index(1)==0), int(s_l.index(1)==0), int(s_d.index(1)==0), int(s_r.index(1)==0)])
 
         # print(int(s_u.index(1)==0))
         # print(int(s_l.index(1)==0))
