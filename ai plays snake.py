@@ -9,13 +9,13 @@ from deep_learning import Agent, Layer, NeuralNetwork, Population
 
 size = 10
 n_games = 1
-vis_enabled = False
+vis_enabled = True
 population_size = 100
 
 
 max_steps = 30
-rate = 0.5
-scale = 0.3
+rate = 0.7
+scale = 0.25
 pool_size = 4
 method = Population.TOP_X
 include_parents = True
