@@ -1,14 +1,12 @@
 import pygame as pg
-import time
 import random
-import numpy
 import math
 import keyboard
 
 
 class Projectile:
 
-    SPEED = 10
+    SPEED = 30
 
     def __init__(self, pos, velocity, owner):
         self.pos = pos
@@ -24,8 +22,8 @@ class Game:
     class Player:
 
         def __init__(self, game, spawn, Id, color_1=None, color_2=None):
-            if color_1 is None: color_1 = (random.randint(10, 255), random.randint(10, 255), random.randint(10, 255))
-            if color_2 is None: color_2 = (random.randint(10, 255), random.randint(10, 255), random.randint(10, 255))
+            if color_1 is None: color_1 = (46, 45, 31)
+            if color_2 is None: color_2 = (55, 56, 35)
 
             self.game = game
 
@@ -35,7 +33,7 @@ class Game:
             self.radius = 10
             self.length = 15
             self.width = 4
-            self.angle = random.random()*math.pi
+            self.angle = random.random()*2*math.pi
             self.velocity = [0, 0]
             self.id = Id
 
@@ -45,27 +43,53 @@ class Game:
 
             self.n_updates = 0
             self.last_shot = 0
-            self.shot_cooldown = 10
+            self.shot_cooldown = 50
 
-        def update(self, velocity, angle_change, shoot):
+            self.angle_to_closest = 0
+
+            self.kills = 0
+
+        def update(self, velocity, angle, shoot):
             if not self.is_alive: return
             self.n_updates += 1
-            self.angle += angle_change
+            self.angle = angle
             self.velocity = [velocity[0]*self.max_vel, velocity[1]*self.max_vel]
             self.pos = [self.pos[0]+self.velocity[0], self.pos[1]+self.velocity[1]]
+
+            if self.pos[0] > self.game.size[0]: self.is_alive = False
+            if self.pos[0] < 0: self.is_alive = False
+            if self.pos[1] > self.game.size[1]: self.is_alive = False
+            if self.pos[1] < 0: self.is_alive = False
+
+
+
             if shoot:
                 if self.n_updates > self.last_shot + self.shot_cooldown:
                     self.game.projectiles.append(Projectile(self.pos[:], (math.cos(self.angle), math.sin(self.angle)), self.id))
                     self.last_shot = self.n_updates
+        
+        def find_closest(self):
+            x, y = self.pos
+            closest_dist = 9999999
+            xc, yc = 0, 0
+            for player in self.game.players:
+                if player is self: continue
+                xe, ye = player.pos
+                dist = math.sqrt(pow(x-xe, 2)+pow(y-ye, 2))
+                if dist < closest_dist:
+                    closest_dist = dist
+                    xc, yc = xe, ye
+            self.angle_to_closest = math.atan2(y-yc, x-xc)
 
-    COLOR_BACKGROUND = (5, 5, 5)
+            
+
+    COLOR_BACKGROUND = (97, 76, 54)
 
     def __init__(self, size=(800, 800)):
         self.size = size
         self.screen = pg.display.set_mode(self.size)
         self.clock = pg.time.Clock()
         self.fps = 60
-        self.last_update_time = None
 
         self.spawn_ofset = 20
 
@@ -78,6 +102,7 @@ class Game:
             xp, yp = projectile.pos
             dist = math.sqrt(pow(x-xp, 2)+pow(y-yp, 2))
             if dist < player.radius and projectile.owner != player.id:
+                self.players[projectile.owner].kills += 1
                 player.is_alive = False
                 continue
             if (self.size[0] > xp > 0) and (self.size[1] > yp > 0):
@@ -87,6 +112,7 @@ class Game:
 
     def restart(self, n_players):
         self.players = []
+        self.players_alive = n_players
 
         for idx in range(n_players):
             x = random.randint(self.spawn_ofset, self.size[0]-self.spawn_ofset)
@@ -101,16 +127,39 @@ class Game:
             self.check_hit(player)
 
     def update(self):
-        if self.last_update_time is None:
-            self.last_update_time = time.time()
 
         self.screen.fill(self.COLOR_BACKGROUND)
 
-        delta = time.time() - self.last_update_time
-
+        n_players_alive = 0
         for player in self.players:
+            n_players_alive += 1
             self.update_player(player)
-            
+            player.find_closest()
+        self.players_alive = n_players_alive
+        
+        for projectile in self.projectiles:
+            projectile.update()
+            pg.draw.circle(self.screen, (255, 0, 0), projectile.pos, 4)
+
+
+
+
+
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                self.running = False
+                pg.quit()
+                quit()
+
+        pg.display.flip()
+        self.clock.tick(self.fps)
+
+
+if __name__ == '__main__':
+    game = Game()
+    game.restart(20)
+    while True:
+        game.update()
 
         i, j = 0, 0
         if keyboard.is_pressed('s'):
@@ -126,30 +175,4 @@ class Game:
         if keyboard.is_pressed('l'): angle = 0.07
         shoot = keyboard.is_pressed('i')
         
-        self.players[0].update((j, i), angle, shoot)
-        
-        for projectile in self.projectiles:
-            projectile.update()
-            pg.draw.circle(self.screen, (255, 0, 0), projectile.pos, 2)
-
-
-
-
-
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                self.running = False
-                pg.quit()
-                quit()
-
-        pg.display.flip()
-        self.clock.tick(self.fps)
-        self.last_update_time = time.time()
-
-
-if __name__ == '__main__':
-    game = Game()
-    game.restart(20)
-    while True:
-        game.update()
-        print(len(game.projectiles))
+        game.players[0].update((j, i), angle, shoot)

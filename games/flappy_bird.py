@@ -42,31 +42,39 @@ class Game:
     COLOR_BACKGROUND = (7, 176, 227)
     COLOR_PIPES = (38, 156, 36)
 
+    SPEED = 300
+
     def __init__(self, size=(800, 400)):
         self.size = size
         self.screen = pygame.display.set_mode(size)
         self.clock = pygame.time.Clock()
 
-        self.hole_size = 80
-        self.pipe_spacing = int(size[0]/3)
-        self.pipe_half_widght = int(self.size[0]/40)
+        # self.hole_size = 80
+        self.hole_size = 40
+        # self.pipe_spacing = int(size[0]/2)
+        self.pipe_spacing = 700
+        # self.pipe_half_widght = int(self.size[0]/20)
+        self.pipe_half_widght = 10
         self.pipe_ofset = int(self.size[1]/8)
 
         self.all_pipes = [[self.size[0], random.randint(0+self.hole_size, self.size[1]-self.hole_size)]]
 
         self.birds_x = int(self.size[0]/5)
-        self.bird_radius = self.size[0]/50
+        self.bird_radius = self.size[1]/25
 
         self.last_update_time = None
 
-        self.speed = 350
+        self.speed = self.SPEED
         self.fps = 60
 
         self.birds = []
 
         self.background_surface = pygame.Surface(size)
 
+        self.updates = 0
+
     def restart(self, birds=1):
+        self.speed = self.SPEED
         self.all_pipes = [[self.size[0], random.randint(0+self.hole_size, self.size[1]-self.hole_size)]]
         self.last_update_time = None
         self.birds = []
@@ -99,7 +107,7 @@ class Game:
 
     def check_colisions(self):
         for pipe in sorted(self.all_pipes):
-            if pipe[0] > self.birds_x:
+            if pipe[0]+self.bird_radius+self.pipe_half_widght > self.birds_x:
                 break
         self.closset_pipe = pipe
         px, py = pipe
@@ -112,6 +120,10 @@ class Game:
 
 
     def update(self):
+        self.updates += 1
+        if self.updates > 50:
+            self.speed += 10
+            self.updates = 0
         if self.last_update_time is None:
             self.last_update_time = time.time()
         delta = time.time() - self.last_update_time

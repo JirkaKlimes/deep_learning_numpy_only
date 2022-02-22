@@ -5,13 +5,13 @@ import numpy as np
 
 
 
-size = (800, 600)
+size = (800, 400)
 population_size = 100
 
 rate = 1
 scale = 0.3
-pool_size = 2
-method = Population.TOP_X
+pool_size = 4
+method = Population.RULETTE_WHEEL
 include_parents = True
 mutated_layers = Agent.RANDOM
 
@@ -22,7 +22,7 @@ agent = Agent([l1, l2])
 
 population = Population(agent, population_size)
 
-# population = Population(file_name='birds.npy')
+population = Population(file_name='birds.npy')
 population.evolution_settings(include_parents, rate, scale, pool_size, method, population_size, mutated_layers=mutated_layers)
 
 game = Game(size)

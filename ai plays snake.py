@@ -7,19 +7,20 @@ import numpy as np
 from deep_learning import Agent, Layer, NeuralNetwork, Population
 
 
-size = 10
+size = 8
 n_games = 1
-vis_enabled = True
+vis_enabled = False
 population_size = 100
 
 
-max_steps = 30
-rate = 0.7
-scale = 0.25
-pool_size = 4
+max_steps = 20
+rate = 1
+scale = 0.2
+pool_size = 2
 method = Population.TOP_X
 include_parents = True
 mutated_layers = NeuralNetwork.RANDOM
+
 
 # l1 = Layer(8, 4, activation=Layer.RELU)
 # l2 = Layer(4, 4, activation=Layer.SOFTMAX)
@@ -29,13 +30,14 @@ mutated_layers = NeuralNetwork.RANDOM
 
 
 population = Population(file_name='snakes.npy')
-population.evolution_settings(include_parents=include_parents, mutation_rate=rate, mutation_scale=scale,
-                             pool_size=pool_size, selection_method=method, population_size=population_size, mutated_layers=mutated_layers)
+population.evolution_settings(include_parents=include_parents, mutation_rate=rate, 
+                              mutation_scale=scale, pool_size=pool_size, selection_method=method, 
+                              population_size=population_size, mutated_layers=mutated_layers)
 
 
 snakes = [Snake(size) for _ in range(population_size)]
 if vis_enabled:
-    vis = Vis(snakes[:100])
+    vis = Vis(snakes[:1])
 
 
 best_fitness = -1000
@@ -85,7 +87,7 @@ while True:
                 quit()
         snakes = [Snake(size) for _ in range(population_size)]
         if vis_enabled:
-            vis.snakes = snakes[:100]
+            vis.snakes = snakes[:1]
         os.system('cls')
         print(f'Gen: {gen} | Best fitness: {best_fitness} | Game: {game_idx+1}/{n_games} | Best score: {best_score}/{best_gen_score}')
 
