@@ -13,10 +13,10 @@ vis_enabled = False
 population_size = 100
 
 
-max_steps = 20
-rate = 0.5
-scale = 0.5
-pool_size = 2
+max_steps = 40
+rate = 0.8
+scale = 0.3
+pool_size = 4
 method = Population.TOP_X
 include_parents = True
 mutated_layers = NeuralNetwork.RANDOM
@@ -37,7 +37,7 @@ population.evolution_settings(include_parents=include_parents, mutation_rate=rat
 
 snakes = [Snake(size) for _ in range(population_size)]
 if vis_enabled:
-    vis = Vis(snakes[:1])
+    vis = Vis(snakes[:100])
 
 
 best_fitness = -1000
@@ -87,7 +87,7 @@ while True:
                 quit()
         snakes = [Snake(size) for _ in range(population_size)]
         if vis_enabled:
-            vis.snakes = snakes[:1]
+            vis.snakes = snakes[:100]
         os.system('cls')
         print(f'Gen: {gen} | Best fitness: {best_fitness} | Game: {game_idx+1}/{n_games} | Best score: {best_score}/{best_gen_score}')
 

@@ -9,38 +9,28 @@ import random
 
 class Layer:
     
-    # activation functions
     SIGMOID = 'sigmoid'
     RELU = 'relu'
     SOFTMAX = 'softmax'
 
-    # normalization functions
     NONE = 'none'
     MIN_MAX = 'minmax'
     DIV_BY_MAX = 'divbymax'
 
-    # mutation history
-    last_weights_mutation = None
-    last_biases_mutation = None
-
-
-    def __init__(self, inputs, neurons, activation=SIGMOID, normalization=NONE, rand_weights=True, rand_biases=True):
-        # creates random array with size number of inputs times number of neurons
-        # or creates array with only ones with size number of inputs times number of neurons
-        if rand_weights: self.weights = np.random.uniform(-rand_weights, rand_weights, (inputs, neurons))
-        else: self.weights = np.ones((inputs, neurons))
+    def __init__(self, inputs, neurons, activation=SIGMOID, normalization=NONE, rand_weights=True):
+        if rand_weights: self.weights = np.random.standard_normal((inputs, neurons))
+        else: self.weights = np.zeros((inputs, neurons))
 
         self.neurons = neurons
         self.inputs = inputs
 
-        # creates random array with size number of neurons
-        # or creates array with only ones with size number of neurons
-        if rand_biases: self.biases = np.random.uniform(-rand_biases, rand_biases, (1, neurons))
-        else: self.biases = np.zeros((1, neurons))
+        self.biases = np.random.zeros((1, neurons))
 
         self.activation = activation
         self.normalization = normalization
 
+        self.last_weights_mutation = None
+        self.last_biases_mutation = None
     
     def push_forward(self, inputs):
         inputs = np.array(inputs)
@@ -48,7 +38,6 @@ class Layer:
             inputs = inputs.reshape((1, -1))
         self.input_values = inputs
 
-        # normalizes inputs with specified method
         match self.normalization:
             case self.MIN_MAX:
                 pass
@@ -59,21 +48,14 @@ class Layer:
             case self.NONE:
                 pass
                 
-        # does dot product on inputs and weights for every sample
-        neuron_sums = np.dot(inputs, self.weights)
+        outputs = np.dot(inputs, self.weights) + self.biases
 
-        # adds biases to neurons outputs for every sample
-        outputs = neuron_sums + self.biases
-
-        # aplies specified activation funtion
         match self.activation:
             case self.SIGMOID:
-                np.clip(outputs, -15, 15, out=outputs)
                 self.outputs = np.divide(1, 1+np.exp(-outputs))
             case self.RELU:
                 self.outputs = np.maximum(0, outputs)
             case self.SOFTMAX:
-                np.clip(outputs, -15, 15, out=outputs)
                 e = np.exp(outputs)
                 e = np.divide(e, np.max(e, axis=1, keepdims=True))
                 self.outputs = np.divide(e, np.sum(e, axis=1, keepdims=True))
@@ -81,8 +63,6 @@ class Layer:
 
     def mutate(self, rate, repeat=False, scale=1):
 
-        # creates random array with size of weights and biases arrays if reapeat is false
-        # if repeat is true, it uses same random array as last time
         if repeat and self.last_weights_mutation is not None:
             weights_mutation = self.last_weights_mutation
             biases_mutation = self.last_biases_mutation
@@ -91,7 +71,6 @@ class Layer:
             weights_mutation = np.random.uniform(-rate, rate, self.weights.shape)
             biases_mutation = np.random.uniform(-rate, rate, self.biases.shape)
 
-            # leavs only scales * 100 % mutations in
             weights_mutation_scale = np.zeros_like(weights_mutation)
             weights_mutation_scale = weights_mutation_scale.reshape((1, -1))
             weights_mutation_scale[:,:math.ceil(weights_mutation_scale.shape[1] * scale)] = 1
@@ -105,11 +84,9 @@ class Layer:
             biases_mutation_scale = np.reshape(biases_mutation_scale, biases_mutation.shape)
             biases_mutation *= biases_mutation_scale
 
-        # saves current mutation for easy repetion
         self.last_weights_mutation = weights_mutation
         self.last_biases_mutation = biases_mutation
 
-        # aplies mutation to weights and biases
         self.weights += weights_mutation
         self.biases += biases_mutation
     
@@ -127,7 +104,6 @@ class Layer:
 class NeuralNetwork:
 
     RANDOM = 'random'
-
     ALL = 'all'
 
     class Visualization:
@@ -167,7 +143,6 @@ class NeuralNetwork:
             pygame.init()
             self.create_screen()
 
-        
         def create_screen(self):
             self.screen = pygame.display.set_mode(self.screen_size)
             self.running = True
@@ -214,13 +189,10 @@ class NeuralNetwork:
                     pygame.display.flip()
                     self.handle_events()
             
-
             if last_frame and quit:
                 self.running = False
                 pygame.quit()
                 
-
-
         def handle_events(self):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -259,8 +231,7 @@ class NeuralNetwork:
                     if layer_idx == 0:
                         self.background = cv.circle(self.background, (x, y), self.radius_neuron, self.color_inputs_outer, self.thickness_neuron, lineType=cv.LINE_AA)
                     else:
-                        bias = biases[idx]
-                        color = self._get_bias_color(bias)
+                        color = self._get_bias_color(biases[idx])
                         if color:
                             self.background = cv.circle(self.background, (x, y), self.radius_neuron, color, self.thickness_neuron, lineType=cv.LINE_AA)
                             if show: self.show_net(frame_time=frame_time, update_background=False)
@@ -289,7 +260,6 @@ class NeuralNetwork:
                 self.background = cv.circle(self.background, (x, y), int(self.radius_neuron-self.thickness_neuron/2), self.color_background, -1, lineType=cv.LINE_AA)
                 if show: self.show_net(frame_time=frame_time, update_background=False)            
                 y += neuron_spacing
-        
 
         def draw_weights(self, show=False, frame_time=-1):
 
@@ -312,7 +282,6 @@ class NeuralNetwork:
                     y += neuron_spacing
                 x += self.layer_spacing
         
-
         def _get_weight_color(self, weight):
             if weight < 0:
                 weight = abs(weight)
@@ -321,7 +290,6 @@ class NeuralNetwork:
                 color = (min(255, int(self.color_connection_positive[0]*weight)), min(255, int(self.color_connection_positive[1]*weight)), min(255, int(self.color_connection_positive[2]*weight)))
             if max(color) < self.black_color_threshold: return False
             return color
-        
 
         def _get_bias_color(self, bias):
             if bias < 0:
@@ -332,7 +300,6 @@ class NeuralNetwork:
             if max(color) < self.black_color_threshold: return False
             return color
         
-
         def fill_neurons(self, layer_idx, output):
             if not output:
                 x = self.left_layer_ofset + self.layer_spacing * layer_idx
@@ -348,7 +315,6 @@ class NeuralNetwork:
                     color = (min(255, int(self.color_neuron_inner[0]*current_activation)), min(255, int(self.color_neuron_inner[1]*current_activation)), min(255, int(self.color_neuron_inner[2]*current_activation)))
                     self.background = cv.circle(self.background, (x, y), int(self.radius_neuron-self.thickness_neuron/2), color, -1, lineType=cv.LINE_AA)
                     y += neuron_spacing
-            
 
             else:
                 x = self.left_layer_ofset + self.layer_spacing * (layer_idx+1)
@@ -365,18 +331,14 @@ class NeuralNetwork:
                     self.background = cv.circle(self.background, (x, y), int(self.radius_neuron-self.thickness_neuron/2), color, -1, lineType=cv.LINE_AA)
                     y += neuron_spacing
 
-
     def __init__(self, layers):
         self.layers = layers
         self.architecture = np.array([[l.inputs, l.neurons] for l in layers])
     
-
     visualization_enabled = False
-
     def enable_visualization(self, size=(1600, 800)):
         self.vis = self.Visualization(screen_size=size, layers=self.layers)
         self.visualization_enabled = True
-
 
     def push_forward(self, inputs, frame_time=-1, hold=False, quit=False, multi=False):
         if not self.visualization_enabled or frame_time == -1:
@@ -387,7 +349,6 @@ class NeuralNetwork:
                 self.outputs = layer.outputs[0]
             else:
                 self.outputs = layer.outputs
-            
             return
 
         if not self.vis.running:
@@ -404,8 +365,6 @@ class NeuralNetwork:
             self.vis.show_activations(frame_time, last_frame=True, hold=hold, quit=quit)
             self.outputs = layer.outputs
 
-
-    
     def mutate(self, rate=1, repeat=False, scale=1, layers=ALL):
         if layers == self.ALL:
             self.last_mutated_layer = self.ALL
@@ -416,32 +375,23 @@ class NeuralNetwork:
             self.last_mutated_layer = layer_idx
             self.layers[layer_idx].mutate(rate=rate, repeat=repeat, scale=scale)
 
-
     def reverse_mutation(self):
         if self.last_mutated_layer == self.ALL:
             for layer in self.layers:
                 layer.reverse_mutation()
-        else:
-            self.layers[self.last_mutated_layer].reverse_mutation()
+        else: self.layers[self.last_mutated_layer].reverse_mutation()
         
     def expand_vertical(self, layer, size):
         self.layers[layer].biases = np.array([np.append(self.layers[layer].biases, np.zeros((size)))])
         self.layers[layer].neurons += size
-
-        w = self.layers[layer].weights
-        e = np.zeros((size, self.layers[layer].inputs))
-
-        self.layers[layer].weights = np.vstack([w.T, e]).T
-
-        e = np.zeros_like(self.layers[layer+1].weights[0])
-        self.layers[layer+1].weights = np.vstack([self.layers[layer+1].weights, e])
+        self.layers[layer].weights = np.vstack([self.layers[layer].weights.T, np.zeros((size, self.layers[layer].inputs))]).T
+        self.layers[layer+1].weights = np.vstack([self.layers[layer+1].weights, np.zeros_like(self.layers[layer+1].weights[0])])
         self.layers[layer+1].inputs += 1
 
     def crossEntropyLoss(self, guess, target):
         guess = guess.clip(1e-99, 1)
         sum = -np.sum(np.log(guess) * target, axis=1)
         return np.mean(sum)
-    
     
     def rootMeanSquareError(self, guess, target, multi=False):
         if not multi:
@@ -479,7 +429,6 @@ class Agent(NeuralNetwork):
         super().__init__(layers)
         
         self.idn = id(self)
-
         self.fitness = 0
         self.breeding_prob = 0
 
@@ -491,12 +440,10 @@ class Agent(NeuralNetwork):
         agent_copy = Agent(new_layers)
         return agent_copy
 
-
 class Population():
 
     RULETTE_WHEEL = 'roulette wheel'
     TOP_X = 'top x of poulation'
-
     SQUARED = 'squared'
     NONE = 'none'
 
@@ -505,7 +452,7 @@ class Population():
         self.include_parents = True
         self.mutation_rate = 1
         self.mutation_scale = 0.1
-        self.pool_size = 6
+        self.pool_size = 4
         self.selection_method = self.TOP_X
         self.mutated_layers = NeuralNetwork.RANDOM
 
@@ -545,11 +492,9 @@ class Population():
         for agent in self.agents:
             agent.breeding_prob = self.fitness_func(agent.fitness) / fitness_sum
 
-
     def create_mating_pool(self, size, method=None):
         if method is None:
             method = self.selection_method
-
         self.calc_breeding_prob()
 
         if method == self.RULETTE_WHEEL:
@@ -586,7 +531,6 @@ class Population():
         if mutated_layers is not None:
             self.mutated_layers = mutated_layers
     
-    
     def breeding_settings(self, n_layers=None):
         if n_layers is not None:
             self.n_layers = n_layers
@@ -596,34 +540,26 @@ class Population():
         child_1 = parent_1.copy()
         child_2 = parent_2.copy()
 
-        if layer_idx is None:
-            layer_idx = random.randint(0, len(parent_1.layers)-1)
+        if layer_idx is None: layer_idx = random.randint(0, len(parent_1.layers)-1)
 
         child_1_biases = child_1.layers[layer_idx].biases[0]
         child_2_biases = child_2.layers[layer_idx].biases[0]
-
         child_1_weights = child_1.layers[layer_idx].weights
         child_2_weights = child_2.layers[layer_idx].weights
 
         layer_size = len(child_1_biases)
 
-        if cross_size is None:
-            cross_size = int(layer_size / 2)
+        if cross_size is None: cross_size = int(layer_size / 2)
 
-        if cross_size == layer_size:
-            split_point = 0
-        else: split_point = random.randint(0, layer_size-cross_size-1)
-            
+        split_point = 0 if cross_size == layer_size else random.randint(0, layer_size-cross_size-1)
+       
         temp = np.copy(child_1_weights.T[split_point:split_point+cross_size])
         child_1_weights.T[split_point:split_point+cross_size] = np.copy(child_2_weights.T[split_point:split_point+cross_size])
         child_2_weights.T[split_point:split_point+cross_size] = temp
-
         temp = np.copy(child_1_biases[split_point:split_point+cross_size])
         child_1_biases[split_point:split_point+cross_size] = np.copy(child_2_biases[split_point:split_point+cross_size])
         child_2_biases[split_point:split_point+cross_size] = temp
-
         return [child_1, child_2]
-
 
     def evolve(self):
         self.calc_breeding_prob()
