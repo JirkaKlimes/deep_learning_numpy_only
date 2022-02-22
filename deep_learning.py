@@ -10,14 +10,14 @@ import random
 class Layer:
     
     # activation functions
-    SIGMOID = 'sigmoid'
-    RELU = 'relu'
-    SOFTMAX = 'softmax'
+    SIGMOID = 1
+    RELU = 2
+    SOFTMAX = 3
 
     # normalization functions
-    NONE = 'none'
-    MIN_MAX = 'minmax'
-    DIV_BY_MAX = 'divbymax'
+    NONE = 4
+    MIN_MAX = 5
+    DIV_BY_MAX = 6
 
     # mutation history
     last_weights_mutation = None
@@ -148,7 +148,9 @@ class NeuralNetwork:
 
         black_color_threshold = 30
 
-        def __init__(self, layers, screen_size=(1600, 800), left_layer_ofset=0.1, window_name='Neural Network'):
+        AUTO = 1
+
+        def __init__(self, layers, screen_size=(1600, 800), left_layer_ofset=0.1, window_name='Neural Network', neuron_size=AUTO):
             self.window_name = window_name
             self.layers = layers
             self.architecture = np.array([[l.inputs, l.neurons] for l in layers], dtype=object)
@@ -157,7 +159,10 @@ class NeuralNetwork:
             self.screen_size = screen_size
             self.left_layer_ofset = int(left_layer_ofset*self.width)
 
-            self.radius_neuron = int(self.height / (self.architecture.max()*2 + 2) / 2)
+            if neuron_size is self.AUTO:
+                self.radius_neuron = int(self.height / (self.architecture.max()*2 + 2) / 2)
+            else:
+                self.radius_neuron = int(neuron_size)
             self.radius_neuron = max(1, self.radius_neuron)
             
             self.blank = np.zeros((self.height, self.width, 3), dtype=np.uint8)
@@ -229,9 +234,6 @@ class NeuralNetwork:
                     quit()
 
         def update_background(self):
-            self.architecture = np.array([[l.inputs, l.neurons] for l in self.layers], dtype=object)
-            self.radius_neuron = int(self.height / (self.architecture.max()*2 + 2) / 2)
-            self.radius_neuron = max(1, self.radius_neuron)
             self.background = np.array(self.blank, copy=True, order='K')
             self.draw_weights()
             self.draw_neurons()
@@ -373,8 +375,8 @@ class NeuralNetwork:
 
     visualization_enabled = False
 
-    def enable_visualization(self, size=(1600, 800)):
-        self.vis = self.Visualization(screen_size=size, layers=self.layers)
+    def enable_visualization(self, size=(1600, 800), neuron_size=Visualization.AUTO):
+        self.vis = self.Visualization(screen_size=size, layers=self.layers, neuron_size=neuron_size)
         self.visualization_enabled = True
 
 
@@ -423,7 +425,7 @@ class NeuralNetwork:
                 layer.reverse_mutation()
         else:
             self.layers[self.last_mutated_layer].reverse_mutation()
-        
+
     def expand_vertical(self, layer, size):
         self.layers[layer].biases = np.array([np.append(self.layers[layer].biases, np.zeros((size)))])
         self.layers[layer].neurons += size
@@ -471,6 +473,40 @@ class NeuralNetwork:
             print(f'Path: "{path}" doesn\'t exists!\n')
             return
         self.layers = list(np.load(path, allow_pickle=True))
+
+if __name__ == '__main__':
+    # create Layer objects
+    l1 = Layer(4, 16, normalization=Layer.DIV_BY_MAX, rand_weights=False)
+    l2 = Layer(16, 8, rand_biases=False)
+    l3 = Layer(8, 4, activation=Layer.SOFTMAX)
+
+    # create NeuralNetwork object from list of Layer objects
+    net = NeuralNetwork([l1, l2, l3])
+    # enables visualization
+    net.enable_visualization()
+    # animates building net
+    net.vis.show_building_net()
+    # show finnished net
+    net.vis.show_net()
+
+    for _ in range(200):
+        # mutates all layers in network randomly by 0.002
+        net.mutate(0.02)
+        net.vis.show_net(frame_time=-1)
+    
+    # net.vis.show_net()
+    for _ in range(400):
+        # mutates all layers in network same as last time
+        net.mutate(0.02, repeat=True)
+        net.vis.show_net(frame_time=-1)
+    
+    net.vis.show_net()
+
+    # pushes data throught the network - if frame_time == -1: nothing is shown
+    net.push_forward([0, 0, 0, 1], frame_time=0.5)
+    net.push_forward([1, 0, 1, 0], frame_time=0.5)
+    # hold = True holds frame on screen, quit will quit entire script after key is pressed
+    net.push_forward([1, 1, 1, 1], frame_time=0.5, hold=True, quit=True)
 
 
 class Agent(NeuralNetwork):
@@ -660,37 +696,3 @@ class Population():
         path.mkdir(exist_ok=True)
         path = Path(f'{path}\{file_name}')
         np.save(path, np.array(self.agents), allow_pickle=True)
-
-
-
-
-if __name__ == '__main__':
-    # create Layer objects
-    l1 = Layer(4, 16, normalization=Layer.DIV_BY_MAX, rand_weights=False)
-    l2 = Layer(16, 8, rand_biases=False)
-    l3 = Layer(8, 4, activation=Layer.SOFTMAX)
-
-    # create NeuralNetwork object from list of Layer objects
-    net = NeuralNetwork([l1, l2, l3])
-    # enables visualization
-    net.enable_visualization()
-    # animates building net
-    net.vis.show_building_net()
-    # show finnished net
-    net.vis.show_net()
-
-    for _ in range(40):
-        # mutates all layers in network randomly
-        net.mutate(0.3)
-        net.vis.show_net(frame_time=-1)
-        # expand random layer verticaly
-        net.expand_vertical(random.randint(0, 1), 1)
-        net.vis.show_net(frame_time=-1)
-    
-    net.vis.show_net()
-
-    # pushes data throught the network - if frame_time == -1: nothing is shown
-    net.push_forward([0, 0, 0, 1], frame_time=0.5)
-    net.push_forward([1, 0, 1, 0], frame_time=0.5)
-    # hold = True holds frame on screen, quit will quit entire script after key is pressed
-    net.push_forward([1, 1, 1, 1], frame_time=0.5, hold=True, quit=True)

@@ -14,8 +14,8 @@ population_size = 100
 
 
 max_steps = 20
-rate = 1
-scale = 0.2
+rate = 0.5
+scale = 0.5
 pool_size = 2
 method = Population.TOP_X
 include_parents = True

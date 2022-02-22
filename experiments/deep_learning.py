@@ -660,37 +660,3 @@ class Population():
         path.mkdir(exist_ok=True)
         path = Path(f'{path}\{file_name}')
         np.save(path, np.array(self.agents), allow_pickle=True)
-
-
-
-
-if __name__ == '__main__':
-    # create Layer objects
-    l1 = Layer(4, 16, normalization=Layer.DIV_BY_MAX, rand_weights=False)
-    l2 = Layer(16, 8, rand_biases=False)
-    l3 = Layer(8, 4, activation=Layer.SOFTMAX)
-
-    # create NeuralNetwork object from list of Layer objects
-    net = NeuralNetwork([l1, l2, l3])
-    # enables visualization
-    net.enable_visualization()
-    # animates building net
-    net.vis.show_building_net()
-    # show finnished net
-    net.vis.show_net()
-
-    for _ in range(40):
-        # mutates all layers in network randomly
-        net.mutate(0.3)
-        net.vis.show_net(frame_time=-1)
-        # expand random layer verticaly
-        net.expand_vertical(random.randint(0, 1), 1)
-        net.vis.show_net(frame_time=-1)
-    
-    net.vis.show_net()
-
-    # pushes data throught the network - if frame_time == -1: nothing is shown
-    net.push_forward([0, 0, 0, 1], frame_time=0.5)
-    net.push_forward([1, 0, 1, 0], frame_time=0.5)
-    # hold = True holds frame on screen, quit will quit entire script after key is pressed
-    net.push_forward([1, 1, 1, 1], frame_time=0.5, hold=True, quit=True)
