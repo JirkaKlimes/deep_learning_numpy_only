@@ -8,17 +8,16 @@ import numpy as np
 size = (800, 400)
 population_size = 100
 
-rate = 1
-scale = 0.3
+rate = 0.2
+scale = 0.5
 pool_size = 4
 method = Population.RULETTE_WHEEL
 include_parents = True
 mutated_layers = Agent.RANDOM
 
-l1 = Layer(3, 4, activation=Layer.RELU)
-l2 = Layer(4, 2, activation=Layer.SOFTMAX)
+l1 = Layer(3, 2, activation=Layer.SHARP_SIGMOID)
 
-agent = Agent([l1, l2])
+agent = Agent([l1])
 
 population = Population(agent, population_size)
 

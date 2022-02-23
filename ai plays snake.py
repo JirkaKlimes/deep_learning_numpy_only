@@ -1,4 +1,3 @@
-from re import T
 from games.snake import Snake, Vis
 from keyboard import is_pressed
 import os
@@ -9,8 +8,8 @@ from deep_learning import Agent, Layer, NeuralNetwork, Population
 
 size = 8
 n_games = 1
-vis_enabled = False
-population_size = 100
+vis_enabled = True
+population_size = 500
 
 
 max_steps = 40
@@ -21,13 +20,11 @@ method = Population.TOP_X
 include_parents = True
 mutated_layers = NeuralNetwork.RANDOM
 
-
 # l1 = Layer(8, 4, activation=Layer.RELU)
 # l2 = Layer(4, 4, activation=Layer.SOFTMAX)
 
 # agent = Agent([l1, l2])
 # population = Population(agent, population_size)
-
 
 population = Population(file_name='snakes.npy')
 population.evolution_settings(include_parents=include_parents, mutation_rate=rate, 
@@ -37,7 +34,7 @@ population.evolution_settings(include_parents=include_parents, mutation_rate=rat
 
 snakes = [Snake(size) for _ in range(population_size)]
 if vis_enabled:
-    vis = Vis(snakes[:100])
+    vis = Vis(snakes[:1])
 
 
 best_fitness = -1000
@@ -87,7 +84,7 @@ while True:
                 quit()
         snakes = [Snake(size) for _ in range(population_size)]
         if vis_enabled:
-            vis.snakes = snakes[:100]
+            vis.snakes = snakes[:1]
         os.system('cls')
         print(f'Gen: {gen} | Best fitness: {best_fitness} | Game: {game_idx+1}/{n_games} | Best score: {best_score}/{best_gen_score}')
 
