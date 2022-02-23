@@ -600,7 +600,7 @@ class Population():
                 elif len(self.agents[0].layers) == 2: ve = 0
                 else: ve = random.randint(0, len(self.agents[0].layers)-2)
             if self.generations % self.horizontal_freq == 0 and random.random() <= self.vertical_chance:
-                if len(self.agents[0].layers) == 1: he = False
+                if len(self.agents[0].layers) == 1: he = 0
                 else: he = random.randint(0, len(self.agents[0].layers)-2)
 
         if ve is not False or he is not False:
@@ -622,5 +622,3 @@ class Population():
         path.mkdir(exist_ok=True)
         path = Path(f'{path}\{file_name}')
         np.save(path, np.array(self.agents), allow_pickle=True)
-
-        
