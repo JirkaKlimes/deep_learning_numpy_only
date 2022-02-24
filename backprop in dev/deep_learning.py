@@ -1,6 +1,6 @@
 import enum
 import os
-from tkinter import Label
+from tkinter import E, Label
 import numpy as np
 import math
 import pygame
@@ -33,6 +33,8 @@ class Layer:
         self.input_values = inputs
 
         outputs = np.dot(inputs, self.weights) + self.biases
+
+        self.not_activated = outputs
 
         match self.activation:
             case self.SIGMOID:
@@ -621,40 +623,58 @@ class Population():
         np.save(path, np.array(self.agents), allow_pickle=True)
 
 
-l1 = Layer(2, 4, activation=Layer.RELU)
-l2 = Layer(4, 2, activation=Layer.RELU)
+l1 = Layer(4, 16)
 
-net = NeuralNetwork([l1, l2])
-
-x = [[1, 0],
-     [0, 1]]
-
-y = [[1, 0],
-     [0, 1]]
-
-x = [[1, 0]]
-
-y = [[1, 0]]
-
-learning_rate = 0.1
-
-def undo_sig(x):
-    return x*(1-x)
-
-def calc_delta(error, outputs):
-    no_sig = undo_sig(outputs)
-    u = no_sig * error * learning_rate
-    l2_weights_change = u * l2.inputs
-    return l2_weights_change
+net = NeuralNetwork([l1])
 
 
-for _ in range(100):
+def get_samples_2():
+
+    x = [x for x in [x.rjust(4, '0') for x in [str(bin(x))[2:] for x in range(0, 16)]]]
+    splited_x = []
+    y = []
+    for new_x in x:
+        new_y = [0]*16
+        new_i = [int(y) for y in new_x]
+        splited_x.append(new_i)
+        new_y[int(new_x, 2)] = 1
+        y.append(new_y)
+    
+    return splited_x, y
+
+x, y = get_samples_2()
+
+def sigmoid(x):
+    return np.divide(1, 1+np.exp(-x))
+
+def sig_prime(x):
+    return sigmoid(x)*(1-sigmoid(x))
+
+def back_prop(x, y, lr):
     net.push_forward(x)
-    print(net.outputs)
-    error = np.mean(y - l2.outputs, axis=0)
-    l2_delta = calc_delta(error, l2.outputs)
-    hid_error = np.dot(l2.weights, error)
-    l1_delta = calc_delta(hid_error, l1.outputs)
-    l2.weights += l2_delta
-    l1.weights += l1_delta
+    error = np.mean(y - net.outputs, axis=0)
+    for layer in net.layers[::-1]:
+        de_activated = sig_prime(layer.not_activated)
+        delta_biases = de_activated * error * lr
+        delta_weights = delta_biases * layer.input_values.T
+        error = np.mean(np.dot(layer.weights, error), axis=0)
+        layer.weights += delta_weights
+        layer.biases += delta_biases
 
+
+learning_rate = 2
+
+net.enable_visualization()
+
+for _ in range(500):
+    j = list(range(16))
+    random.shuffle(j)
+    for i in j:
+        back_prop([x[i]], [y[i]], learning_rate)
+    net.vis.show_net(-1)
+print('done')
+net.vis.show_net()
+
+for i in range(16):
+    net.push_forward([x[i]])
+    print(np.argmax(net.outputs))
