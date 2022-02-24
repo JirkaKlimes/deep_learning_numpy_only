@@ -111,7 +111,7 @@ class Snake:
         ms_l = self.size - ms_r - 1
         
         ms_d = self.size - self.head[1] - 1
-        ms_u = self.size - ms_r - 1
+        ms_u = self.size - ms_d - 1
 
         x = self.head[0]
         y = self.head[1]
@@ -125,27 +125,15 @@ class Snake:
         s_d += [1] * 100
         s_r += [1] * 100
 
-        # if 3 in s_u and s_u.index(3) < s_u.index(1):
-        #     print('apple up')
+        u = max(0, -s_u.index(1) + 3)
+        l = max(0, -s_l.index(1) + 3)
+        d = max(0, -s_d.index(1) + 3)
+        r = max(0, -s_r.index(1) + 3)
 
-        # if 3 in s_l and s_l.index(3) < s_l.index(1):
-        #     print('apple left')
 
-        # if 3 in s_d and s_d.index(3) < s_d.index(1):
-        #     print('apple down')
-
-        # if 3 in s_r and s_r.index(3) < s_r.index(1):
-        #     print('apple right')
-        
         info = np.array([int(3 in s_u and s_u.index(3) < s_u.index(1)), int(3 in s_l and s_l.index(3) < s_l.index(1)),
                          int(3 in s_d and s_d.index(3) < s_d.index(1)), int(3 in s_r and s_r.index(3) < s_r.index(1)),
-                         int(s_u.index(1)==0), int(s_l.index(1)==0), int(s_d.index(1)==0), int(s_r.index(1)==0)])
-
-        # print(int(s_u.index(1)==0))
-        # print(int(s_l.index(1)==0))
-        # print(int(s_d.index(1)==0))
-        # print(int(s_r.index(1)==0))
-
+                         int(u), int(l), int(d), int(r)])
 
         return info
         
@@ -170,7 +158,7 @@ class Vis:
                 if board[y][x] == 1:
                     image[y][x] = (82, 255, 77)
                 if board[y][x] == 2:
-                    image[y][x] = (0, 161, 0)
+                    image[y][x] = (0, 0, 255)
                 if board[y][x] == 3:
                     image[y][x] = (255, 13, 13)
         
@@ -230,3 +218,11 @@ class Vis:
                 self.running = False
                 pygame.quit()
                 quit()
+
+if __name__ == '__main__':
+    snake = Snake(10)
+    for _ in range(10):
+        snake.update()
+        print(snake.board)
+        print(snake.get_steps())
+        input()

@@ -1,5 +1,6 @@
 import enum
 import os
+from tkinter import Label
 import numpy as np
 import math
 import pygame
@@ -16,39 +17,21 @@ class Layer:
     SOFTMAX = 'softmax'
     SHARP_SIGMOID = 'sharpsigmoid'
 
-
-    NONE = 'none'
-    MIN_MAX = 'minmax'
-    DIV_BY_MAX = 'divbymax'
-
-    def __init__(self, inputs, neurons, activation=SIGMOID, normalization=NONE, rand_weights=True):
+    def __init__(self, inputs, neurons, activation=SIGMOID, rand_weights=True):
         if rand_weights: self.weights = np.random.standard_normal((inputs, neurons))
         else: self.weights = np.zeros((inputs, neurons))
+        self.biases = np.zeros((1, neurons))
 
         self.neurons = neurons
         self.inputs = inputs
-
-        self.biases = np.zeros((1, neurons))
-
         self.activation = activation
-        self.normalization = normalization
+
+        self.errors = np.zeros(neurons)
 
     def push_forward(self, inputs):
         inputs = np.array(inputs)
-        if 'array' not in str(type(inputs[0])):
-            inputs = inputs.reshape((1, -1))
         self.input_values = inputs
 
-        match self.normalization:
-            case self.MIN_MAX:
-                pass
-            case self.DIV_BY_MAX:
-                absolute = np.abs(inputs)
-                maximum = np.max(absolute, axis=1, keepdims=True)
-                inputs = np.divide(inputs, maximum)
-            case self.NONE:
-                pass
-                
         outputs = np.dot(inputs, self.weights) + self.biases
 
         match self.activation:
@@ -63,7 +46,6 @@ class Layer:
             case self.SHARP_SIGMOID:
                 self.outputs = np.minimum(1, np.maximum(0, outputs))
 
-    
     def mutate(self, rate, n_neurons=0):
         neurons = range(0, len(self.biases[0]))
         n_neurons = n_neurons if n_neurons > 0 else random.randint(0, len(self.biases[0]-1))
@@ -77,6 +59,7 @@ class Layer:
         copied.weights = np.array(self.weights, copy=True, order='K')
         copied.biases = np.array(self.biases, copy=True, order='K')
         return copied
+    
 
 class NeuralNetwork:
 
@@ -316,14 +299,11 @@ class NeuralNetwork:
         self.vis = self.Visualization(screen_size=size, layers=self.layers)
         self.visualization_enabled = True
 
-    def push_forward(self, inputs, frame_time=-1, hold=False, quit=False, multi=False):
+    def push_forward(self, inputs, frame_time=-1, hold=False, quit=False):
         if not self.visualization_enabled or frame_time == -1:
             for layer in self.layers:
                 layer.push_forward(inputs)
                 inputs = layer.outputs
-            if not multi:
-                self.outputs = layer.outputs[0]
-            else:
                 self.outputs = layer.outputs
             return
 
@@ -639,3 +619,42 @@ class Population():
         path.mkdir(exist_ok=True)
         path = Path(f'{path}\{file_name}')
         np.save(path, np.array(self.agents), allow_pickle=True)
+
+
+l1 = Layer(2, 4, activation=Layer.RELU)
+l2 = Layer(4, 2, activation=Layer.RELU)
+
+net = NeuralNetwork([l1, l2])
+
+x = [[1, 0],
+     [0, 1]]
+
+y = [[1, 0],
+     [0, 1]]
+
+x = [[1, 0]]
+
+y = [[1, 0]]
+
+learning_rate = 0.1
+
+def undo_sig(x):
+    return x*(1-x)
+
+def calc_delta(error, outputs):
+    no_sig = undo_sig(outputs)
+    u = no_sig * error * learning_rate
+    l2_weights_change = u * l2.inputs
+    return l2_weights_change
+
+
+for _ in range(100):
+    net.push_forward(x)
+    print(net.outputs)
+    error = np.mean(y - l2.outputs, axis=0)
+    l2_delta = calc_delta(error, l2.outputs)
+    hid_error = np.dot(l2.weights, error)
+    l1_delta = calc_delta(hid_error, l1.outputs)
+    l2.weights += l2_delta
+    l1.weights += l1_delta
+
